@@ -1,0 +1,30 @@
+spring:
+  config:
+    import: secrets.yml
+  application:
+    name: record-management
+  servlet:
+    multipart:
+      enabled: true
+      file-size-threshold: 2MB
+      max-file-size: 5MB
+      max-request-size: 10MB
+
+server:
+  port: 9192
+  servlet:
+    context-path: /v1/record
+
+cloud:
+  aws:
+    credentials:
+      access-key: ${aws.credentials.access-key}
+      secret-key: ${aws.credentials.secret-key}
+    region:
+      static: ${aws.region.static}
+    stack:
+      auto: false
+
+application:
+  bucket:
+    name: hospitalmgmt-record-service
