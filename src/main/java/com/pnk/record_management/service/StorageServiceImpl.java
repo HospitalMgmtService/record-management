@@ -48,6 +48,9 @@ public class StorageServiceImpl implements StorageService {
         File fileObject = convertMultiPartFileToFile(file);
         try {
             s3Client.putObject(new PutObjectRequest(bucketName, fileName, fileObject));
+
+            // add uploaded file name to a database (NoSQL) for keeping management
+
             return "File uploaded: " + fileName;
         } catch (Exception e) {
             log.error("Error uploading file to S3", e);
@@ -78,6 +81,9 @@ public class StorageServiceImpl implements StorageService {
     @Override
     public void deleteFile(String fileName) {
         s3Client.deleteObject(bucketName, fileName);
+
+        // remove uploaded file name from database (NoSQL) for keeping management
+
         log.info("File uploaded: {}", fileName);
     }
 
@@ -95,5 +101,10 @@ public class StorageServiceImpl implements StorageService {
 
         return convertedFile;
     }
+
+
+    // add uploaded file name to a database (NoSQL) for keeping management
+
+    // remove uploaded file name from database (NoSQL) for keeping management
 
 }

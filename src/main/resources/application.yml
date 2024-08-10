@@ -9,14 +9,6 @@ spring:
       file-size-threshold: 2MB
       max-file-size: 5MB
       max-request-size: 10MB
-  datasource:
-    url: jdbc:h2:mem:testdb
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: sa
-  h2:
-    console:
-      enabled: true
 
 server:
   port: 9192

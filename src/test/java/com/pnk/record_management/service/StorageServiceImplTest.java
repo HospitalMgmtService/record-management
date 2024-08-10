@@ -12,8 +12,6 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
@@ -32,7 +30,7 @@ class StorageServiceImplTest {
     private String bucketName;
 
     @Test
-    void testUploadFile_Success() throws IOException {
+    void testUploadFile_Success() {
         // Arrange
         MultipartFile multipartFile = new MockMultipartFile(
                 "file", "test.txt", "text/plain", "Test Content".getBytes());
