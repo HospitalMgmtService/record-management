@@ -51,16 +51,18 @@ public class StorageServiceImpl implements StorageService {
 
             // add uploaded file name to a database (NoSQL) for keeping management
 
+            log.info("StorageServiceImpl >> uploadFile >> File uploaded: {}", fileName);
+
             return "File uploaded: " + fileName;
         } catch (Exception e) {
-            log.error("Error uploading file to S3", e);
+            log.error("StorageServiceImpl >> uploadFile >> Error uploading file to S3", e);
             throw new RuntimeException("File upload failed");
         } finally {
             try {
                 Files.delete(fileObject.toPath());
-                log.info("Temporary file deleted successfully");
+                log.info("StorageServiceImpl >> uploadFile >> Temporary file deleted successfully");
             } catch (Exception e) {
-                log.warn("Failed to delete temporary file", e);
+                log.warn("StorageServiceImpl >> uploadFile >> Failed to delete temporary file", e);
             }
         }
     }
@@ -71,9 +73,10 @@ public class StorageServiceImpl implements StorageService {
         S3Object s3Object = s3Client.getObject(bucketName, fileName);
         try (S3ObjectInputStream s3ObjectInputStream = s3Object.getObjectContent()) {
             byte[] content = IOUtils.toByteArray(s3ObjectInputStream);
+            log.info("StorageServiceImpl >> downloadFile >> File downloaded: {}", fileName);
             return content;
         } catch (IOException e) {
-            throw new RuntimeException("Failed to download file from S3", e);
+            throw new RuntimeException("StorageServiceImpl >> downloadFile >> Failed to download file from S3", e);
         }
     }
 
@@ -82,9 +85,9 @@ public class StorageServiceImpl implements StorageService {
     public void deleteFile(String fileName) {
         s3Client.deleteObject(bucketName, fileName);
 
-        // remove uploaded file name from database (NoSQL) for keeping management
+        log.info("StorageServiceImpl >> deleteFile >> File deleted: {}", fileName);
 
-        log.info("File uploaded: {}", fileName);
+        // remove uploaded file name from database (NoSQL) for keeping management
     }
 
 
@@ -95,7 +98,7 @@ public class StorageServiceImpl implements StorageService {
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {
-            log.error("Error converting MultipartFile to File", e);
+            log.error("StorageServiceImpl >> convertMultiPartFileToFile >> Error converting MultipartFile to File", e);
             throw new RuntimeException(e);
         }
 
