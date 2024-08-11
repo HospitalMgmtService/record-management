@@ -14,7 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 
 @RestController
-@RequestMapping("files")
+@RequestMapping("/files")
 @RequiredArgsConstructor // injected by Constructor, no longer need of @Autowire
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Slf4j
