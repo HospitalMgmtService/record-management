@@ -1,5 +1,6 @@
 package com.pnk.record_management.controller;
 
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.pnk.record_management.service.StorageServiceImpl;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -24,26 +25,41 @@ public class StorageController {
 
     @PostMapping("/upload")
     public ResponseEntity<String> uploadFile(@RequestParam(value = "file") MultipartFile file) {
+        log.info("StorageController >> uploadFile >> {}", file.getOriginalFilename());
         return new ResponseEntity<>(storageService.uploadFile(file), HttpStatus.OK);
     }
 
 
     @GetMapping("/download/{fileName}")
     public ResponseEntity<ByteArrayResource> downloadFile(@PathVariable String fileName) {
-        byte[] data = storageService.downloadFile(fileName);
-        ByteArrayResource resource = new ByteArrayResource(data);
-        return ResponseEntity
-                .ok()
-                .contentLength(data.length)
-                .header("Content-type", "application/octet-stream")
-                .header("Content-disposition", "attachment; file=\"" + fileName + "\"")
-                .body(resource);
+        try {
+            byte[] data = storageService.downloadFile(fileName);
+            ByteArrayResource resource = new ByteArrayResource(data);
+
+            log.info("StorageController >> downloadFile >> {}", fileName);
+
+            return ResponseEntity
+                    .ok()
+                    .contentLength(data.length)
+                    .header("Content-type", "application/octet-stream")
+                    .header("Content-disposition", "attachment; file=\"" + fileName + "\"")
+                    .body(resource);
+        } catch (AmazonS3Exception amazonS3Exception) {
+            log.warn("StorageController >> downloadFile >> Filename {} not found on storage", fileName);
+
+            return ResponseEntity
+                    .notFound()
+                    .build();
+        }
     }
 
 
     @DeleteMapping("/delete/{fileName}")
     public ResponseEntity<String> deleteFile(@PathVariable String fileName) {
         storageService.deleteFile(fileName);
+
+        log.info("StorageController >> deleteFile >> Filename {}", fileName);
+
         return ResponseEntity
                 .ok()
                 .body("File was deleted successfully.");
