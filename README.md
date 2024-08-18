@@ -1,6 +1,14 @@
 # Record Management Service
 This microservice is responsible for:
-* Uploading/downloading/deleting files/records/materials
+* Electronic Health Records (EHR):
+* Digitize patient medical records for easy access and management.
+* Ensure EHRs are updated in real-time with new medical information.
+* Security and Privacy:
+* Implement access controls to ensure only authorized personnel can view or update records.
+* Ensure compliance with healthcare regulations like HIPAA (Health Insurance Portability and Accountability Act).
+* Access and Updates:
+* Provide secure access to EHRs for authorized staff.
+* Implement audit trails to track changes made to patient records.
 
 ## Tech stack
 * Build tool: maven >= 3.8.8
