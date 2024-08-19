@@ -1,6 +1,7 @@
 package com.pnk.record_management.service;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
@@ -45,24 +46,27 @@ public class StorageServiceImpl implements StorageService {
         String timePrefix = utcNow.format(formatter);
         String fileName = timePrefix + "_" + utcNow.getZone() + "_" + file.getOriginalFilename();
 
-        File fileObject = convertMultiPartFileToFile(file);
+        File fileObject = null;
         try {
+            fileObject = convertMultiPartFileToFile(file);
             s3Client.putObject(new PutObjectRequest(bucketName, fileName, fileObject));
 
             // add uploaded file name to a database (NoSQL) for keeping management
 
-            log.info("StorageServiceImpl >> uploadFile >> File uploaded: {}", fileName);
+            log.info(">> uploadFile >> File uploaded: {}", fileName);
 
             return "File uploaded: " + fileName;
         } catch (Exception e) {
-            log.error("StorageServiceImpl >> uploadFile >> Error uploading file to S3", e);
+            log.error(">> uploadFile >> Error uploading file to S3", e);
             throw new RuntimeException("File upload failed");
         } finally {
-            try {
-                Files.delete(fileObject.toPath());
-                log.info("StorageServiceImpl >> uploadFile >> Temporary file deleted successfully");
-            } catch (Exception e) {
-                log.warn("StorageServiceImpl >> uploadFile >> Failed to delete temporary file", e);
+            if (fileObject != null) {
+                try {
+                    Files.delete(fileObject.toPath());
+                    log.info(">> uploadFile >> Temporary file deleted successfully");
+                } catch (Exception e) {
+                    log.warn(">> uploadFile >> Failed to delete temporary file", e);
+                }
             }
         }
     }
@@ -73,10 +77,17 @@ public class StorageServiceImpl implements StorageService {
         S3Object s3Object = s3Client.getObject(bucketName, fileName);
         try (S3ObjectInputStream s3ObjectInputStream = s3Object.getObjectContent()) {
             byte[] content = IOUtils.toByteArray(s3ObjectInputStream);
-            log.info("StorageServiceImpl >> downloadFile >> File downloaded: {}", fileName);
+            log.info(">> downloadFile >> File downloaded: {}", fileName);
             return content;
+        } catch (AmazonS3Exception e) {
+            log.error(">> downloadFile >> S3 error while downloading file: {}", fileName, e);
+            throw new RuntimeException("Failed to download file from S3 due to S3 error", e);
         } catch (IOException e) {
-            throw new RuntimeException("StorageServiceImpl >> downloadFile >> Failed to download file from S3", e);
+            log.error(">> downloadFile >> I/O error while processing the file: {}", fileName, e);
+            throw new RuntimeException("Failed to download file from S3 due to I/O error", e);
+        } catch (Exception e) {
+            log.error(">> downloadFile >> Unexpected error while downloading file: {}", fileName, e);
+            throw new RuntimeException("Failed to download file from S3 due to an unexpected error", e);
         }
     }
 
@@ -85,7 +96,7 @@ public class StorageServiceImpl implements StorageService {
     public void deleteFile(String fileName) {
         s3Client.deleteObject(bucketName, fileName);
 
-        log.info("StorageServiceImpl >> deleteFile >> File deleted: {}", fileName);
+        log.info(">> deleteFile >> File deleted: {}", fileName);
 
         // remove uploaded file name from database (NoSQL) for keeping management
     }
@@ -98,7 +109,7 @@ public class StorageServiceImpl implements StorageService {
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {
-            log.error("StorageServiceImpl >> convertMultiPartFileToFile >> Error converting MultipartFile to File", e);
+            log.error(">> convertMultiPartFileToFile >> Error converting MultipartFile to File", e);
             throw new RuntimeException(e);
         }
 
