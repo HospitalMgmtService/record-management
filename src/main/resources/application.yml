@@ -46,7 +46,7 @@ logging:
 
 # Sonar Configuration
 sonar:
-  projectKey: identity-service
+  projectKey: record-management-service
   projectName: Hospital Management project
   host:
     url: http://localhost:9000
