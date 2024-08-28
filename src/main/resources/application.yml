@@ -9,12 +9,18 @@ spring:
       file-size-threshold: 2MB
       max-file-size: 5MB
       max-request-size: 10MB
+  kafka:
+    bootstrap-servers: localhost:9094
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 server:
   port: 9192
   servlet:
-    context-path: /v1/record
+    context-path: /record
 
+# Cloud Configuration
 cloud:
   aws:
     credentials:
@@ -28,3 +34,19 @@ cloud:
 application:
   bucket:
     name: hospitalmgmt-record-service
+
+# Logging Configuration
+logging:
+  file:
+    name: patient-management.log
+    max-size: 10MB
+    max-history: 10
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %logger{36} - %msg%n"
+
+# Sonar Configuration
+sonar:
+  projectKey: identity-service
+  projectName: Hospital Management project
+  host:
+    url: http://localhost:9000
