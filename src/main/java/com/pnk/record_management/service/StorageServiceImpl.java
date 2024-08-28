@@ -1,10 +1,7 @@
 package com.pnk.record_management.service;
 
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
+import com.amazonaws.services.s3.model.*;
 import com.amazonaws.util.IOUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +16,8 @@ import java.nio.file.Files;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 
@@ -69,6 +68,32 @@ public class StorageServiceImpl implements StorageService {
                 }
             }
         }
+    }
+
+
+    @Override
+    public List<String> searchFilesContains(String searchingWord) {
+        // Create a request to list objects in the S3 bucket
+        ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName);
+        ListObjectsV2Result result;
+
+        // StringBuilder to collect matching filenames
+        List<String> matchingFiles = new ArrayList<>();
+
+        do {
+            // Get the next batch of objects from the bucket
+            result = s3Client.listObjectsV2(request);
+
+            for (S3ObjectSummary summary : result.getObjectSummaries()) {
+                String key = summary.getKey();
+                if (key.contains(searchingWord))
+                    matchingFiles.add(key);
+            }
+            // If there are more objects, get the next batch
+            request.setContinuationToken(result.getNextContinuationToken());
+        } while (result.isTruncated());
+
+        return matchingFiles;
     }
 
 
