@@ -38,7 +38,7 @@ application:
 # Logging Configuration
 logging:
   file:
-    name: patient-management.log
+    name: record-management-service.log
     max-size: 10MB
     max-history: 10
   pattern:
