@@ -9,10 +9,12 @@ public interface StorageService {
 
     String uploadFile(MultipartFile file);
 
-    List<String> searchFilesContains(String searchingWord);
+    List<String> searchFilenameExact(String searchingWord);
+
+    List<String> searchFilenameContains(String searchingWord);
 
     byte[] downloadFile(String fileName);
 
-    void deleteFile(String fileName);
+    boolean deleteFile(String fileName);
 
 }
