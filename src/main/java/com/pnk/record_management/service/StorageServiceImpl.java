@@ -72,7 +72,33 @@ public class StorageServiceImpl implements StorageService {
 
 
     @Override
-    public List<String> searchFilesContains(String searchingWord) {
+    public List<String> searchFilenameExact(String searchingWord) {
+        // Create a request to list objects in the S3 bucket
+        ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName);
+        ListObjectsV2Result result;
+
+        // StringBuilder to collect matching filenames
+        List<String> matchingFiles = new ArrayList<>();
+
+        do {
+            // Get the next batch of objects from the bucket
+            result = s3Client.listObjectsV2(request);
+
+            for (S3ObjectSummary summary : result.getObjectSummaries()) {
+                String key = summary.getKey();
+                if (key.equals(searchingWord))
+                    matchingFiles.add(key);
+            }
+            // If there are more objects, get the next batch
+            request.setContinuationToken(result.getNextContinuationToken());
+        } while (result.isTruncated());
+
+        return matchingFiles;
+    }
+
+
+    @Override
+    public List<String> searchFilenameContains(String searchingWord) {
         // Create a request to list objects in the S3 bucket
         ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName);
         ListObjectsV2Result result;
@@ -118,12 +144,18 @@ public class StorageServiceImpl implements StorageService {
 
 
     @Override
-    public void deleteFile(String fileName) {
-        s3Client.deleteObject(bucketName, fileName);
-
+    public boolean deleteFile(String fileName) {
         log.info(">> deleteFile >> File deleted: {}", fileName);
 
+        List<String> searchResultBeforeDeletion = searchFilenameExact(fileName);
+
+        s3Client.deleteObject(bucketName, fileName);
+
+        List<String> searchResultAfterDeletion = searchFilenameExact(fileName);
+
         // remove uploaded file name from database (NoSQL) for keeping management
+
+        return !searchResultBeforeDeletion.isEmpty() && searchResultAfterDeletion.isEmpty();
     }
 
 

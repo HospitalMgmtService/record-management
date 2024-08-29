@@ -1,13 +1,13 @@
 package com.pnk.record_management.controller;
 
 import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.pnk.record_management.dto.response.ApiResponse;
 import com.pnk.record_management.service.StorageServiceImpl;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,19 +26,22 @@ public class StorageController {
 
 
     @PostMapping("/upload")
-    public ResponseEntity<String> uploadFile(@RequestParam(value = "file") MultipartFile file) {
+    public ApiResponse<String> uploadFile(@RequestParam(value = "file") MultipartFile file) {
         log.info(">> uploadFile >> {}", file.getOriginalFilename());
-        return new ResponseEntity<>(storageService.uploadFile(file), HttpStatus.OK);
+
+        return ApiResponse.<String>builder()
+                .result(storageService.uploadFile(file))
+                .build();
     }
 
 
     @GetMapping("/search/{searchingWord}")
-    public ResponseEntity<List<String>> searchFile(@PathVariable String searchingWord) {
+    public ApiResponse<List<String>> searchFile(@PathVariable String searchingWord) {
         log.info(">> searchFile::searchingWord: {}", searchingWord);
 
-        return ResponseEntity
-                .ok()
-                .body(storageService.searchFilesContains(searchingWord));
+        return ApiResponse.<List<String>>builder()
+                .result(storageService.searchFilenameContains(searchingWord))
+                .build();
     }
 
 
@@ -59,7 +62,7 @@ public class StorageController {
                     .header("Content-disposition", "attachment; file=\"" + fileName + "\"")
                     .body(resource);
         } catch (AmazonS3Exception amazonS3Exception) {
-            log.warn(">> downloadFile >> Filename {} not found on storage", fileName);
+            log.info(">> downloadFile >> Filename {} not found on storage", fileName);
 
             return ResponseEntity
                     .notFound()
@@ -69,15 +72,15 @@ public class StorageController {
 
 
     @DeleteMapping("/delete/{fileName}")
-    public ResponseEntity<String> deleteFile(@PathVariable String fileName) {
+    public ApiResponse<String> deleteFile(@PathVariable String fileName) {
         log.info(">> deleteFile::fileName: {}", fileName);
 
-        storageService.deleteFile(fileName);
+        boolean deletionResult = storageService.deleteFile(fileName);
 
-        log.info(">> deleteFile >> Filename {}", fileName);
-
-        return ResponseEntity
-                .ok()
-                .body("File was deleted successfully.");
+        return ApiResponse.<String>builder()
+                .result(deletionResult
+                        ? "File " + fileName + " was deleted successfully"
+                        : "File " + fileName + " was failed to delete or not found")
+                .build();
     }
 }
