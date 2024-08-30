@@ -9,11 +9,11 @@ spring:
       file-size-threshold: 2MB
       max-file-size: 5MB
       max-request-size: 10MB
-  kafka:
-    bootstrap-servers: localhost:9094
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+#  kafka:
+#    bootstrap-servers: localhost:9094
+#    producer:
+#      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+#      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 server:
   port: 9192
