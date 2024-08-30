@@ -3,6 +3,7 @@ package com.pnk.record_management.service;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.*;
 import com.amazonaws.util.IOUtils;
+import com.pnk.record_management.dto.response.RecordResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -39,7 +40,7 @@ public class StorageServiceImpl implements StorageService {
 
 
     @Override
-    public String uploadFile(MultipartFile file) {
+    public RecordResponse uploadFile(MultipartFile file) {
         ZonedDateTime utcNow = ZonedDateTime.now(ZoneId.of("UTC"));
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy_MM_dd_hh_mm_ss_SSS");
         String timePrefix = utcNow.format(formatter);
@@ -54,7 +55,10 @@ public class StorageServiceImpl implements StorageService {
 
             log.info(">> uploadFile >> File uploaded: {}", fileName);
 
-            return "File uploaded: " + fileName;
+            return RecordResponse.builder()
+                    .bucketName(bucketName)
+                    .message("File uploaded: " + fileName)
+                    .build();
         } catch (Exception e) {
             log.error(">> uploadFile >> Error uploading file to S3", e);
             throw new RuntimeException("File upload failed");
@@ -71,14 +75,17 @@ public class StorageServiceImpl implements StorageService {
     }
 
 
+    /*
+     * key: is the saved file's filename
+     * */
     @Override
-    public List<String> searchFilenameExact(String searchingWord) {
+    public List<RecordResponse> searchFilenameExact(String searchingWord) {
         // Create a request to list objects in the S3 bucket
         ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName);
         ListObjectsV2Result result;
 
         // StringBuilder to collect matching filenames
-        List<String> matchingFiles = new ArrayList<>();
+        List<RecordResponse> matchingFiles = new ArrayList<>();
 
         do {
             // Get the next batch of objects from the bucket
@@ -87,7 +94,12 @@ public class StorageServiceImpl implements StorageService {
             for (S3ObjectSummary summary : result.getObjectSummaries()) {
                 String key = summary.getKey();
                 if (key.equals(searchingWord))
-                    matchingFiles.add(key);
+                    matchingFiles.add(
+                            RecordResponse.builder()
+                                    .bucketName(bucketName)
+                                    .message(key)
+                                    .build()
+                    );
             }
             // If there are more objects, get the next batch
             request.setContinuationToken(result.getNextContinuationToken());
@@ -98,13 +110,13 @@ public class StorageServiceImpl implements StorageService {
 
 
     @Override
-    public List<String> searchFilenameContains(String searchingWord) {
+    public List<RecordResponse> searchFilenameContains(String searchingWord) {
         // Create a request to list objects in the S3 bucket
         ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName);
         ListObjectsV2Result result;
 
         // StringBuilder to collect matching filenames
-        List<String> matchingFiles = new ArrayList<>();
+        List<RecordResponse> matchingFiles = new ArrayList<>();
 
         do {
             // Get the next batch of objects from the bucket
@@ -112,8 +124,14 @@ public class StorageServiceImpl implements StorageService {
 
             for (S3ObjectSummary summary : result.getObjectSummaries()) {
                 String key = summary.getKey();
-                if (key.contains(searchingWord))
-                    matchingFiles.add(key);
+                if (key.contains(searchingWord)) {
+                    matchingFiles.add(
+                            RecordResponse.builder()
+                                    .bucketName(bucketName)
+                                    .message(key)
+                                    .build()
+                    );
+                }
             }
             // If there are more objects, get the next batch
             request.setContinuationToken(result.getNextContinuationToken());
@@ -144,22 +162,31 @@ public class StorageServiceImpl implements StorageService {
 
 
     @Override
-    public boolean deleteFile(String fileName) {
+    public RecordResponse deleteFile(String fileName) {
         log.info(">> deleteFile >> File deleted: {}", fileName);
 
-        List<String> searchResultBeforeDeletion = searchFilenameExact(fileName);
+        List<RecordResponse> searchResultBeforeDeletion = searchFilenameExact(fileName);
 
         s3Client.deleteObject(bucketName, fileName);
 
-        List<String> searchResultAfterDeletion = searchFilenameExact(fileName);
+        List<RecordResponse> searchResultAfterDeletion = searchFilenameExact(fileName);
 
         // remove uploaded file name from database (NoSQL) for keeping management
 
-        return !searchResultBeforeDeletion.isEmpty() && searchResultAfterDeletion.isEmpty();
+        if (!searchResultBeforeDeletion.isEmpty() && searchResultAfterDeletion.isEmpty()) {
+            return RecordResponse.builder()
+                    .message("File " + fileName + " was deleted successfully")
+                    .build();
+        }
+        return RecordResponse.builder()
+                .message("File " + fileName + " was failed to delete or not found.")
+                .build();
     }
 
 
     private File convertMultiPartFileToFile(MultipartFile file) {
+        log.info(">> convertMultiPartFileToFile::file: {}", file);
+
         File convertedFile = new File(Objects.requireNonNull(file.getOriginalFilename()));
         try (FileOutputStream fileOutputStream = new FileOutputStream(convertedFile)) {
             fileOutputStream.write(file.getBytes());
