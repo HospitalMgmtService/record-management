@@ -2,6 +2,7 @@ package com.pnk.record_management.controller;
 
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.pnk.record_management.dto.response.ApiResponse;
+import com.pnk.record_management.dto.response.RecordResponse;
 import com.pnk.record_management.service.StorageServiceImpl;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -26,20 +27,20 @@ public class StorageController {
 
 
     @PostMapping("/upload")
-    public ApiResponse<String> uploadFile(@RequestParam(value = "file") MultipartFile file) {
+    public ApiResponse<RecordResponse> uploadFile(@RequestParam(value = "file") MultipartFile file) {
         log.info(">> uploadFile >> {}", file.getOriginalFilename());
 
-        return ApiResponse.<String>builder()
+        return ApiResponse.<RecordResponse>builder()
                 .result(storageService.uploadFile(file))
                 .build();
     }
 
 
     @GetMapping("/search/{searchingWord}")
-    public ApiResponse<List<String>> searchFile(@PathVariable String searchingWord) {
+    public ApiResponse<List<RecordResponse>> searchFile(@PathVariable String searchingWord) {
         log.info(">> searchFile::searchingWord: {}", searchingWord);
 
-        return ApiResponse.<List<String>>builder()
+        return ApiResponse.<List<RecordResponse>>builder()
                 .result(storageService.searchFilenameContains(searchingWord))
                 .build();
     }
@@ -47,7 +48,7 @@ public class StorageController {
 
     @GetMapping("/download/{fileName}")
     public ResponseEntity<ByteArrayResource> downloadFile(@PathVariable String fileName) {
-        log.info(">> searchFile::downloadFile: {}", fileName);
+        log.info(">> downloadFile::downloadFile: {}", fileName);
 
         try {
             byte[] data = storageService.downloadFile(fileName);
@@ -72,15 +73,13 @@ public class StorageController {
 
 
     @DeleteMapping("/delete/{fileName}")
-    public ApiResponse<String> deleteFile(@PathVariable String fileName) {
+    public ApiResponse<RecordResponse> deleteFile(@PathVariable String fileName) {
         log.info(">> deleteFile::fileName: {}", fileName);
 
-        boolean deletionResult = storageService.deleteFile(fileName);
+        RecordResponse deletionResult = storageService.deleteFile(fileName);
 
-        return ApiResponse.<String>builder()
-                .result(deletionResult
-                        ? "File " + fileName + " was deleted successfully"
-                        : "File " + fileName + " was failed to delete or not found")
+        return ApiResponse.<RecordResponse>builder()
+                .result(deletionResult)
                 .build();
     }
 }
