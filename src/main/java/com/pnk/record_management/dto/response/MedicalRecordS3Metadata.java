@@ -18,7 +18,7 @@ public class MedicalRecordS3Metadata {
 
     String key;
 
-    String eTag;
+    String etag;
 
     long size;
 
