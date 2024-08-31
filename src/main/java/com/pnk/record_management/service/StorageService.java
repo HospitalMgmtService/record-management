@@ -1,20 +1,29 @@
 package com.pnk.record_management.service;
 
+import com.pnk.record_management.dto.response.MedicalRecordResponse;
+import com.pnk.record_management.dto.response.MedicalRecordS3Metadata;
+import com.pnk.record_management.entity.MedicalRecord;
+import org.springframework.stereotype.Repository;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 
+@Repository
 public interface StorageService {
 
-    String uploadFile(MultipartFile file);
+    MedicalRecordResponse uploadFileToS3(MultipartFile file);
 
-    List<String> searchFilenameExact(String searchingWord);
+    List<MedicalRecordS3Metadata> searchS3ExactFilename(String searchingWord);
 
-    List<String> searchFilenameContains(String searchingWord);
+    List<MedicalRecordS3Metadata> searchS3ContainsFilename(String searchingWord);
 
-    byte[] downloadFile(String fileName);
+    byte[] downloadFileFromS3(String fileName);
 
-    boolean deleteFile(String fileName);
+    MedicalRecordResponse deleteFileFromS3(String fileName);
+
+    MedicalRecordResponse insertMedicalRecordInDB(MedicalRecordS3Metadata s3Metadata);
+
+    MedicalRecordResponse updateMedicalRecordInDB(String medicalRecordName);
 
 }

@@ -2,7 +2,9 @@ package com.pnk.record_management.controller;
 
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.pnk.record_management.dto.response.ApiResponse;
-import com.pnk.record_management.service.StorageServiceImpl;
+import com.pnk.record_management.dto.response.MedicalRecordResponse;
+import com.pnk.record_management.dto.response.MedicalRecordS3Metadata;
+import com.pnk.record_management.service.StorageService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -22,38 +24,36 @@ import java.util.List;
 @Slf4j
 public class StorageController {
 
-    StorageServiceImpl storageService;
+    StorageService storageService;
 
 
     @PostMapping("/upload")
-    public ApiResponse<String> uploadFile(@RequestParam(value = "file") MultipartFile file) {
+    public ApiResponse<MedicalRecordResponse> uploadFile(@RequestParam(value = "file") MultipartFile file) {
         log.info(">> uploadFile >> {}", file.getOriginalFilename());
 
-        return ApiResponse.<String>builder()
-                .result(storageService.uploadFile(file))
+        return ApiResponse.<MedicalRecordResponse>builder()
+                .result(storageService.uploadFileToS3(file))
                 .build();
     }
 
 
     @GetMapping("/search/{searchingWord}")
-    public ApiResponse<List<String>> searchFile(@PathVariable String searchingWord) {
+    public ApiResponse<List<MedicalRecordS3Metadata>> searchFile(@PathVariable String searchingWord) {
         log.info(">> searchFile::searchingWord: {}", searchingWord);
 
-        return ApiResponse.<List<String>>builder()
-                .result(storageService.searchFilenameContains(searchingWord))
+        return ApiResponse.<List<MedicalRecordS3Metadata>>builder()
+                .result(storageService.searchS3ContainsFilename(searchingWord))
                 .build();
     }
 
 
     @GetMapping("/download/{fileName}")
     public ResponseEntity<ByteArrayResource> downloadFile(@PathVariable String fileName) {
-        log.info(">> searchFile::downloadFile: {}", fileName);
+        log.info(">> downloadFile::downloadFile: {}", fileName);
 
         try {
-            byte[] data = storageService.downloadFile(fileName);
+            byte[] data = storageService.downloadFileFromS3(fileName);
             ByteArrayResource resource = new ByteArrayResource(data);
-
-            log.info(">> downloadFile >> {}", fileName);
 
             return ResponseEntity
                     .ok()
@@ -62,7 +62,7 @@ public class StorageController {
                     .header("Content-disposition", "attachment; file=\"" + fileName + "\"")
                     .body(resource);
         } catch (AmazonS3Exception amazonS3Exception) {
-            log.info(">> downloadFile >> Filename {} not found on storage", fileName);
+            log.info(">> downloadFile >> Filename {} not found on S3", fileName);
 
             return ResponseEntity
                     .notFound()
@@ -72,15 +72,13 @@ public class StorageController {
 
 
     @DeleteMapping("/delete/{fileName}")
-    public ApiResponse<String> deleteFile(@PathVariable String fileName) {
+    public ApiResponse<MedicalRecordResponse> deleteFile(@PathVariable String fileName) {
         log.info(">> deleteFile::fileName: {}", fileName);
 
-        boolean deletionResult = storageService.deleteFile(fileName);
+        MedicalRecordResponse deletionResult = storageService.deleteFileFromS3(fileName);
 
-        return ApiResponse.<String>builder()
-                .result(deletionResult
-                        ? "File " + fileName + " was deleted successfully"
-                        : "File " + fileName + " was failed to delete or not found")
+        return ApiResponse.<MedicalRecordResponse>builder()
+                .result(deletionResult)
                 .build();
     }
 }
