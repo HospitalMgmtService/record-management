@@ -178,14 +178,14 @@ public class StorageServiceImpl implements StorageService {
 
     @Override
     public byte[] downloadFileFromS3(String fileName) {
-        S3Object s3Object = s3Client.getObject(bucketName, fileName);
-        try (S3ObjectInputStream s3ObjectInputStream = s3Object.getObjectContent()) {
+        try (S3Object s3Object = s3Client.getObject(bucketName, fileName);
+             S3ObjectInputStream s3ObjectInputStream = s3Object.getObjectContent()) {
             byte[] content = IOUtils.toByteArray(s3ObjectInputStream);
             log.info(">> downloadFile >> File downloaded: {}", fileName);
             return content;
         } catch (AmazonS3Exception e) {
             log.error(">> downloadFile >> S3 error while downloading file: {}", fileName, e);
-            throw new RuntimeException("Failed to download file from S3 due to S3 error", e);
+            throw new AmazonS3Exception("Failed to download file from S3 due to an S3 error", e);
         } catch (IOException e) {
             log.error(">> downloadFile >> I/O error while processing the file: {}", fileName, e);
             throw new RuntimeException("Failed to download file from S3 due to I/O error", e);

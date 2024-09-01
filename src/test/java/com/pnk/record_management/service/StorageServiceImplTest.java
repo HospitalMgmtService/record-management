@@ -1,13 +1,15 @@
 package com.pnk.record_management.service;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.Owner;
+import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.pnk.record_management.dto.response.MedicalRecordResponse;
 import com.pnk.record_management.dto.response.MedicalRecordS3Metadata;
 import com.pnk.record_management.entity.MedicalRecord;
 import com.pnk.record_management.repository.MedicalRecordRepository;
-import lombok.RequiredArgsConstructor;
-import org.junit.jupiter.api.AfterEach;
+import lombok.experimental.NonFinal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,14 +17,17 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.Date;
@@ -31,11 +36,9 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 
-@RequiredArgsConstructor // injected by Constructor, no longer need of @Autowire
 @SpringBootTest
 @ExtendWith(MockitoExtension.class)
 @TestPropertySource("/test.properties")
@@ -52,6 +55,13 @@ class StorageServiceImplTest {
 
     @Mock
     private MultipartFile multipartFile;
+
+    @Mock
+    private S3Object s3Object;
+
+    @NonFinal
+    @Value("${application.bucket.name}")
+    private String bucketName;
 
     ModelMapper modelMapper = new ModelMapper();
 
@@ -96,8 +106,88 @@ class StorageServiceImplTest {
     }
 
 
+    /**
+     * Method under test: {@link StorageServiceImpl#downloadFileFromS3(String)}
+     */
     @Test
-    void testDownloadFileFromS3() {
+    void testDownloadFileFromS3_Success() {
+        // Arrange
+        String fileName = "testFile.txt";
+        byte[] expectedContent = "test content".getBytes();
+        InputStream inputStream = new ByteArrayInputStream(expectedContent);
+
+        when(s3Client.getObject(bucketName, fileName)).thenReturn(s3Object);
+        when(s3Object.getObjectContent()).thenReturn(new S3ObjectInputStream(inputStream, null));
+
+        // Act
+        byte[] result = storageService.downloadFileFromS3(fileName);
+
+        // Assert
+        assertArrayEquals(expectedContent, result);
+        verify(s3Client, times(1)).getObject(bucketName, fileName);
+    }
+
+
+    /**
+     * Method under test: {@link StorageServiceImpl#downloadFileFromS3(String)}
+     */
+    @Test
+    void testDownloadFileFromS3_S3Exception() {
+        // Arrange
+        String fileName = "testFile.txt";
+        AmazonS3Exception s3Exception = new AmazonS3Exception("S3 error");
+        when(s3Client.getObject(bucketName, fileName)).thenThrow(s3Exception);
+
+        // Act & Assert
+        AmazonS3Exception thrownException = assertThrows(AmazonS3Exception.class, () -> {
+            storageService.downloadFileFromS3(fileName);
+        });
+
+        assertEquals("Failed to download file from S3 due to an S3 error", thrownException.getErrorMessage());
+        verify(s3Client, times(1)).getObject(bucketName, fileName);
+    }
+
+
+    /**
+     * Method under test: {@link StorageServiceImpl#downloadFileFromS3(String)}
+     */
+    @Test
+    void testDownloadFileFromS3_IOError() throws IOException {
+        // Arrange
+        String fileName = "test-file.txt";
+        S3Object s3Object = mock(S3Object.class);
+        S3ObjectInputStream s3ObjectInputStream = mock(S3ObjectInputStream.class);
+
+        when(s3Client.getObject(bucketName, fileName)).thenReturn(s3Object);
+        when(s3Object.getObjectContent()).thenReturn(s3ObjectInputStream);
+        when(s3ObjectInputStream.read(any(byte[].class))).thenThrow(IOException.class);
+
+        // Act & Assert
+        RuntimeException thrown = assertThrows(RuntimeException.class, () -> {
+            storageService.downloadFileFromS3(fileName);
+        });
+
+        assertEquals("Failed to download file from S3 due to I/O error", thrown.getMessage());
+        verify(s3Client, times(1)).getObject(bucketName, fileName);
+    }
+
+
+    /**
+     * Method under test: {@link StorageServiceImpl#downloadFileFromS3(String)}
+     */
+    @Test
+    void testDownloadFileFromS3_UnexpectedException() {
+        // Arrange
+        String fileName = "testFile.txt";
+        when(s3Client.getObject(bucketName, fileName)).thenThrow(new RuntimeException("Unexpected error"));
+
+        // Act & Assert
+        RuntimeException thrownException = assertThrows(RuntimeException.class, () -> {
+            storageService.downloadFileFromS3(fileName);
+        });
+
+        assertTrue(thrownException.getMessage().contains("Failed to download file from S3 due to an unexpected error"));
+        verify(s3Client, times(1)).getObject(bucketName, fileName);
     }
 
 
