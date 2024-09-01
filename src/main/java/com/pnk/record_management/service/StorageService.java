@@ -22,10 +22,4 @@ public interface StorageService {
 
     MedicalRecordResponse deleteFileFromS3(String fileName);
 
-    File convertMultiPartFileToFile(MultipartFile file);
-
-    MedicalRecordResponse insertMedicalRecordInDB(MedicalRecordS3Metadata s3Metadata);
-
-    MedicalRecordResponse updateMedicalRecordExistenceStatusInDB(String medicalRecordName);
-
 }
