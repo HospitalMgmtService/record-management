@@ -2,10 +2,10 @@ package com.pnk.record_management.service;
 
 import com.pnk.record_management.dto.response.MedicalRecordResponse;
 import com.pnk.record_management.dto.response.MedicalRecordS3Metadata;
-import com.pnk.record_management.entity.MedicalRecord;
 import org.springframework.stereotype.Repository;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.util.List;
 
 
@@ -22,8 +22,10 @@ public interface StorageService {
 
     MedicalRecordResponse deleteFileFromS3(String fileName);
 
+    File convertMultiPartFileToFile(MultipartFile file);
+
     MedicalRecordResponse insertMedicalRecordInDB(MedicalRecordS3Metadata s3Metadata);
 
-    MedicalRecordResponse updateMedicalRecordInDB(String medicalRecordName);
+    MedicalRecordResponse updateMedicalRecordExistenceStatusInDB(String medicalRecordName);
 
 }
