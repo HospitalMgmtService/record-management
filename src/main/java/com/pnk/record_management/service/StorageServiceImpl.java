@@ -17,10 +17,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -78,6 +78,9 @@ public class StorageServiceImpl implements StorageService {
             medicalRecordResponse.setMedicalRecordS3Metadata(s3Metadata);
 
             return medicalRecordResponse;
+        } catch (MultipartException e) {
+            log.error(">> uploadFile >> Multipart request error: {}", e.getMessage());
+            throw new IllegalArgumentException("Current request is not a multipart request", e);
         } catch (Exception e) {
             log.error(">> uploadFile >> Error uploading file to S3", e);
             throw new RuntimeException("File upload failed");
@@ -95,7 +98,7 @@ public class StorageServiceImpl implements StorageService {
 
 
     /*
-     * key: is the existing file's filename
+     * key: is the file's filename existing in S3
      * */
     @Override
     public List<MedicalRecordS3Metadata> searchS3ExactFilename(String searchingWord) {
@@ -118,7 +121,7 @@ public class StorageServiceImpl implements StorageService {
                             MedicalRecordS3Metadata.builder()
                                     .bucketName(summary.getBucketName())
                                     .key(summary.getKey())
-                                    .eTag(summary.getETag())
+                                    .etag(summary.getETag())
                                     .size(summary.getSize())
                                     .lastModified(summary.getLastModified())
                                     .storageClass(summary.getStorageClass())
@@ -156,7 +159,7 @@ public class StorageServiceImpl implements StorageService {
                             MedicalRecordS3Metadata.builder()
                                     .bucketName(summary.getBucketName())
                                     .key(summary.getKey())
-                                    .eTag(summary.getETag())
+                                    .etag(summary.getETag())
                                     .size(summary.getSize())
                                     .lastModified(summary.getLastModified())
                                     .storageClass(summary.getStorageClass())
@@ -210,26 +213,24 @@ public class StorageServiceImpl implements StorageService {
 
         if (searchResultAfterDeletion.isEmpty()) {
             // update existence status in MongoDB for management purposes
-            MedicalRecordResponse savedMedicalRecordResponse = updateMedicalRecordInDB(fileName);
+            MedicalRecordResponse savedMedicalRecordResponse = updateMedicalRecordExistenceStatusInDB(fileName);
 
             log.info("File {} deleted successfully from S3 and its correspondent database entry updated.", fileName);
 
             // Return a response indicating successful deletion
-            return modelMapper.map(savedMedicalRecordResponse, MedicalRecordResponse.class);
+            return savedMedicalRecordResponse;
         } else {
             throw new AppException(ErrorCode.FILE_DELETION_FAILED);
         }
     }
 
 
-    private File convertMultiPartFileToFile(MultipartFile file) {
+    public File convertMultiPartFileToFile(MultipartFile file) {
         log.info(">> convertMultiPartFileToFile::file: {}", file);
 
         File convertedFile = new File(Objects.requireNonNull(file.getOriginalFilename()));
         try (FileOutputStream fileOutputStream = new FileOutputStream(convertedFile)) {
             fileOutputStream.write(file.getBytes());
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
         } catch (IOException e) {
             log.error(">> convertMultiPartFileToFile >> Error converting MultipartFile to File", e);
             throw new RuntimeException(e);
@@ -261,7 +262,7 @@ public class StorageServiceImpl implements StorageService {
 
 
     @Override
-    public MedicalRecordResponse updateMedicalRecordInDB(String fileName) {
+    public MedicalRecordResponse updateMedicalRecordExistenceStatusInDB(String fileName) {
         MedicalRecord savedMedicalRecord = medicalRecordRepository
                 .findByMedicalRecordName(fileName)
                 .orElseThrow(() -> new AppException(ErrorCode.MEDICAL_RECORD_NOT_EXISTING));
