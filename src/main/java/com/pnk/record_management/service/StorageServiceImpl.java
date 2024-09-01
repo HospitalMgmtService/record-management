@@ -16,6 +16,7 @@ import lombok.experimental.NonFinal;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.MultipartFile;
@@ -56,6 +57,7 @@ public class StorageServiceImpl implements StorageService {
 
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public MedicalRecordResponse uploadFileToS3(MultipartFile file) {
         Instant utcNow = ZonedDateTime.now(ZoneId.of("UTC")).toInstant();
 
@@ -197,6 +199,7 @@ public class StorageServiceImpl implements StorageService {
 
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public MedicalRecordResponse deleteFileFromS3(String fileName) {
         log.info(">> deleteFile >> Deleting file: {} on S3", fileName);
 
@@ -225,7 +228,7 @@ public class StorageServiceImpl implements StorageService {
     }
 
 
-    public File convertMultiPartFileToFile(MultipartFile file) {
+    private File convertMultiPartFileToFile(MultipartFile file) {
         log.info(">> convertMultiPartFileToFile::file: {}", file);
 
         File convertedFile = new File(Objects.requireNonNull(file.getOriginalFilename()));
@@ -241,8 +244,7 @@ public class StorageServiceImpl implements StorageService {
 
 
     // add uploaded file name to a database (MongoDB) for management
-    @Override
-    public MedicalRecordResponse insertMedicalRecordInDB(MedicalRecordS3Metadata s3Metadata) {
+    private MedicalRecordResponse insertMedicalRecordInDB(MedicalRecordS3Metadata s3Metadata) {
         MedicalRecord medicalRecord = MedicalRecord.builder()
                 .id(UUID.randomUUID().toString())
                 .medicalRecordName(s3Metadata.getKey())
@@ -261,8 +263,7 @@ public class StorageServiceImpl implements StorageService {
     }
 
 
-    @Override
-    public MedicalRecordResponse updateMedicalRecordExistenceStatusInDB(String fileName) {
+    private MedicalRecordResponse updateMedicalRecordExistenceStatusInDB(String fileName) {
         MedicalRecord savedMedicalRecord = medicalRecordRepository
                 .findByMedicalRecordName(fileName)
                 .orElseThrow(() -> new AppException(ErrorCode.MEDICAL_RECORD_NOT_EXISTING));
