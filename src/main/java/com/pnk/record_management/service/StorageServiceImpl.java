@@ -34,6 +34,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import static com.pnk.record_management.utils.JwtUtils.extractDataFromJWT;
+
 
 @Service
 @RequiredArgsConstructor // injected by Constructor, no longer need of @Autowire
@@ -72,7 +74,7 @@ public class StorageServiceImpl implements StorageService {
             fileObject = convertMultiPartFileToFile(file);
             s3Client.putObject(new PutObjectRequest(bucketName, fileName, fileObject));
 
-            // after uploading, find with exact fileName to get metadata of the S3 file
+            // after uploading, search with exact fileName to get metadata of the file in S3
             MedicalRecordS3Metadata s3Metadata = searchS3ExactFilename(fileName).getFirst();
 
             // add uploaded file name to a database (MongoDB) for management purpose
@@ -252,7 +254,7 @@ public class StorageServiceImpl implements StorageService {
                 .creationDateTime(Instant.now())
                 .latestUpdateDateTime(s3Metadata.getLastModified().toInstant())
                 .s3Availability(true)
-                .updatedByUser("get username sent from the producer")
+                .updatedByUser(extractDataFromJWT().get("name").toString())
                 .build();
 
         log.info(">> uploadFile >> medicalRecord in DB: {}", medicalRecord);
@@ -268,9 +270,9 @@ public class StorageServiceImpl implements StorageService {
                 .findByMedicalRecordName(fileName)
                 .orElseThrow(() -> new AppException(ErrorCode.MEDICAL_RECORD_NOT_EXISTING));
 
-        savedMedicalRecord.setS3Availability(false);
         savedMedicalRecord.setLatestUpdateDateTime(Instant.now());
-        savedMedicalRecord.setMedicalRecordS3Metadata(null);
+        savedMedicalRecord.setS3Availability(false);
+        savedMedicalRecord.setUpdatedByUser(extractDataFromJWT().get("name").toString());
 
         savedMedicalRecord = medicalRecordRepository.save(savedMedicalRecord);
 
