@@ -21,7 +21,11 @@ public class MedicalRecordResponse {
 
     Instant creationDateTime;
 
+    String elapsedCreationTime;
+
     Instant latestUpdateDateTime;
+
+    String elapsedUpdateTime;
 
     boolean s3Availability;
 

@@ -43,6 +43,8 @@ import static com.pnk.record_management.utils.JwtUtils.extractDataFromJWT;
 @Slf4j
 public class StorageServiceImpl implements StorageService {
 
+    com.pnk.record_management.service.DateTimeFormatter dateTimeFormatter;
+
     MedicalRecordRepository medicalRecordRepository;
 
     private final AmazonS3 s3Client;
@@ -80,6 +82,8 @@ public class StorageServiceImpl implements StorageService {
             // add uploaded file name to a database (MongoDB) for management purpose
             MedicalRecordResponse medicalRecordResponse = insertMedicalRecordInDB(s3Metadata);
             medicalRecordResponse.setMedicalRecordS3Metadata(s3Metadata);
+            medicalRecordResponse.setElapsedCreationTime(
+                    dateTimeFormatter.format(medicalRecordResponse.getCreationDateTime()));
 
             return medicalRecordResponse;
         } catch (MultipartException e) {
