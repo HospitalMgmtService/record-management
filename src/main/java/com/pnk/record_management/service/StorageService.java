@@ -5,7 +5,6 @@ import com.pnk.record_management.dto.response.MedicalRecordS3Metadata;
 import org.springframework.stereotype.Repository;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.util.List;
 
 
