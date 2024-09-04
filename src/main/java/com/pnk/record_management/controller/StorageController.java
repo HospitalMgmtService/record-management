@@ -37,12 +37,22 @@ public class StorageController {
     }
 
 
-    @GetMapping("/search/{searchingWord}")
-    public ApiResponse<List<MedicalRecordS3Metadata>> searchFile(@PathVariable String searchingWord) {
+    @GetMapping("/search-s3/{searchingWord}")
+    public ApiResponse<List<MedicalRecordS3Metadata>> searchFileInS3(@PathVariable String searchingWord) {
         log.info(">> searchFile::searchingWord: {}", searchingWord);
 
         return ApiResponse.<List<MedicalRecordS3Metadata>>builder()
                 .result(storageService.searchS3ContainsFilename(searchingWord))
+                .build();
+    }
+
+
+    @GetMapping("/search-db/{searchingWord}")
+    public ApiResponse<List<MedicalRecordResponse>> searchFileInDB(@PathVariable String searchingWord) {
+        log.info(">> searchFile::searchFileInDB: {}", searchingWord);
+
+        return ApiResponse.<List<MedicalRecordResponse>>builder()
+                .result(storageService.searchDatabaseExactFilename(searchingWord))
                 .build();
     }
 

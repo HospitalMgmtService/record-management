@@ -12,4 +12,5 @@ public interface MedicalRecordRepository extends MongoRepository<MedicalRecord, 
 
     Optional<MedicalRecord> findByMedicalRecordName(String medicalRecordName);
 
+    Optional<MedicalRecord> findByMedicalRecordNameContains(String medicalRecordName);
 }

@@ -71,7 +71,7 @@ public class StorageServiceImpl implements StorageService {
 
         File fileObject = null;
         try {
-            log.info(">> uploadFile >> Uploading file: {} on S3", fileName);
+            log.info(">> uploadFileToS3 >> Uploading file: {} on S3", fileName);
 
             fileObject = convertMultiPartFileToFile(file);
             s3Client.putObject(new PutObjectRequest(bucketName, fileName, fileObject));
@@ -84,21 +84,23 @@ public class StorageServiceImpl implements StorageService {
             medicalRecordResponse.setMedicalRecordS3Metadata(s3Metadata);
             medicalRecordResponse.setElapsedCreationTime(
                     dateTimeFormatter.format(medicalRecordResponse.getCreationDateTime()));
+            medicalRecordResponse.setElapsedUpdateTime(
+                    dateTimeFormatter.format(medicalRecordResponse.getLatestUpdateDateTime()));
 
             return medicalRecordResponse;
         } catch (MultipartException e) {
-            log.error(">> uploadFile >> Multipart request error: {}", e.getMessage());
+            log.error(">> uploadFileToS3 >> Multipart request error: {}", e.getMessage());
             throw new IllegalArgumentException("Current request is not a multipart request", e);
         } catch (Exception e) {
-            log.error(">> uploadFile >> Error uploading file to S3", e);
+            log.error(">> uploadFileToS3 >> Error uploading file to S3", e);
             throw new RuntimeException("File upload failed");
         } finally {
             if (fileObject != null) {
                 try {
                     Files.delete(fileObject.toPath());
-                    log.info(">> uploadFile >> Temporary file deleted successfully");
+                    log.info(">> uploadFileToS3 >> Temporary file deleted successfully");
                 } catch (Exception e) {
-                    log.warn(">> uploadFile >> Failed to delete temporary file", e);
+                    log.warn(">> uploadFileToS3 >> Failed to delete temporary file", e);
                 }
             }
         }
@@ -110,6 +112,8 @@ public class StorageServiceImpl implements StorageService {
      * */
     @Override
     public List<MedicalRecordS3Metadata> searchS3ExactFilename(String searchingWord) {
+        log.info(">> searchS3ExactFilename ....");
+
         // Create a request to list objects in the S3 bucket
         ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName);
         ListObjectsV2Result result;
@@ -121,10 +125,10 @@ public class StorageServiceImpl implements StorageService {
             result = s3Client.listObjectsV2(request);
 
             for (S3ObjectSummary summary : result.getObjectSummaries()) {
-//                log.info(">> searchS3FilenameExact::summary: {}", summary);
+//                log.info(">> searchS3ExactFilename::summary: {}", summary);
                 String key = summary.getKey();
                 if (key.equals(searchingWord)) {
-//                    log.info(">> searchFilenameExact::key {}", key);
+//                    log.info(">> searchS3ExactFilename::key {}", key);
                     matchingFiles.add(
                             MedicalRecordS3Metadata.builder()
                                     .bucketName(summary.getBucketName())
@@ -148,6 +152,8 @@ public class StorageServiceImpl implements StorageService {
 
     @Override
     public List<MedicalRecordS3Metadata> searchS3ContainsFilename(String searchingWord) {
+        log.info(">> searchS3ContainsFilename ....");
+
         // Create a request to list objects in the S3 bucket
         ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName);
         ListObjectsV2Result result;
@@ -159,10 +165,10 @@ public class StorageServiceImpl implements StorageService {
             result = s3Client.listObjectsV2(request);
 
             for (S3ObjectSummary summary : result.getObjectSummaries()) {
-//                log.info(">> searchS3FilenameContains::summary: {}", summary);
+//                log.info(">> searchS3ContainsFilename::summary: {}", summary);
                 String key = summary.getKey();
                 if (key.contains(searchingWord)) {
-//                    log.info(">> searchFilenameContains::key {}", key);
+//                    log.info(">> searchS3ContainsFilename::key {}", key);
                     matchingFiles.add(
                             MedicalRecordS3Metadata.builder()
                                     .bucketName(summary.getBucketName())
@@ -185,20 +191,52 @@ public class StorageServiceImpl implements StorageService {
 
 
     @Override
+    public List<MedicalRecordResponse> searchDatabaseExactFilename(String searchingWord) {
+        var retrievedFile = medicalRecordRepository.findByMedicalRecordName(searchingWord)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        MedicalRecordResponse medicalRecordResponse = modelMapper.map(retrievedFile, MedicalRecordResponse.class);
+        medicalRecordResponse.setElapsedCreationTime(
+                dateTimeFormatter.format(medicalRecordResponse.getCreationDateTime()));
+        medicalRecordResponse.setElapsedUpdateTime(
+                dateTimeFormatter.format(medicalRecordResponse.getLatestUpdateDateTime()));
+
+        log.info(">> searchDatabaseExactFilename::medicalRecordResponse {}", medicalRecordResponse);
+
+        return List.of(medicalRecordResponse);
+    }
+
+
+    @Override
+    public List<MedicalRecordResponse> searchDatabaseContainsFilename(String searchingWord) {
+        var retrievedFile = medicalRecordRepository.findByMedicalRecordNameContains(searchingWord)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        MedicalRecordResponse medicalRecordResponse = modelMapper.map(retrievedFile, MedicalRecordResponse.class);
+        medicalRecordResponse.setElapsedCreationTime(
+                dateTimeFormatter.format(medicalRecordResponse.getCreationDateTime()));
+
+        log.info(">> searchDatabaseContainsFilename::medicalRecordResponse {}", medicalRecordResponse);
+
+        return List.of(medicalRecordResponse);
+    }
+
+
+    @Override
     public byte[] downloadFileFromS3(String fileName) {
         try (S3Object s3Object = s3Client.getObject(bucketName, fileName);
              S3ObjectInputStream s3ObjectInputStream = s3Object.getObjectContent()) {
             byte[] content = IOUtils.toByteArray(s3ObjectInputStream);
-            log.info(">> downloadFile >> File downloaded: {}", fileName);
+            log.info(">> downloadFileFromS3 >> File downloaded: {}", fileName);
             return content;
         } catch (AmazonS3Exception e) {
-            log.error(">> downloadFile >> S3 error while downloading file: {}", fileName, e);
+            log.error(">> downloadFileFromS3 >> S3 error while downloading file: {}", fileName, e);
             throw new AmazonS3Exception("Failed to download file from S3 due to an S3 error", e);
         } catch (IOException e) {
-            log.error(">> downloadFile >> I/O error while processing the file: {}", fileName, e);
+            log.error(">> downloadFileFromS3 >> I/O error while processing the file: {}", fileName, e);
             throw new RuntimeException("Failed to download file from S3 due to I/O error", e);
         } catch (Exception e) {
-            log.error(">> downloadFile >> Unexpected error while downloading file: {}", fileName, e);
+            log.error(">> downloadFileFromS3 >> Unexpected error while downloading file: {}", fileName, e);
             throw new RuntimeException("Failed to download file from S3 due to an unexpected error", e);
         }
     }
@@ -220,17 +258,20 @@ public class StorageServiceImpl implements StorageService {
         // Check if the file was successfully deleted from S3
         List<MedicalRecordS3Metadata> searchResultAfterDeletion = searchS3ExactFilename(fileName);
 
-        if (searchResultAfterDeletion.isEmpty()) {
-            // update existence status in MongoDB for management purposes
-            MedicalRecordResponse savedMedicalRecordResponse = updateMedicalRecordExistenceStatusInDB(fileName);
-
-            log.info("File {} deleted successfully from S3 and its correspondent database entry updated.", fileName);
-
-            // Return a response indicating successful deletion
-            return savedMedicalRecordResponse;
-        } else {
+        if (!searchResultAfterDeletion.isEmpty())
             throw new AppException(ErrorCode.FILE_DELETION_FAILED);
-        }
+
+        // update existence status in MongoDB for management purposes
+        MedicalRecordResponse savedMedicalRecordResponse = updateMedicalRecordExistenceStatusInDB(fileName);
+        savedMedicalRecordResponse.setElapsedCreationTime(
+                dateTimeFormatter.format(savedMedicalRecordResponse.getCreationDateTime()));
+        savedMedicalRecordResponse.setElapsedUpdateTime(
+                dateTimeFormatter.format(savedMedicalRecordResponse.getLatestUpdateDateTime()));
+
+        log.info(">> deleteFileFromS3 >> File {} deleted successfully from S3 and its correspondent database entry updated.", fileName);
+
+        // Return a response indicating successful deletion
+        return savedMedicalRecordResponse;
     }
 
 
@@ -255,13 +296,13 @@ public class StorageServiceImpl implements StorageService {
                 .id(UUID.randomUUID().toString())
                 .medicalRecordName(s3Metadata.getKey())
                 .patientId("get patientId sent from the producer")
-                .creationDateTime(Instant.now())
+                .creationDateTime(s3Metadata.getLastModified().toInstant())
                 .latestUpdateDateTime(s3Metadata.getLastModified().toInstant())
                 .s3Availability(true)
                 .updatedByUser(extractDataFromJWT().get("name").toString())
                 .build();
 
-        log.info(">> uploadFile >> medicalRecord in DB: {}", medicalRecord);
+        log.info(">> insertMedicalRecordInDB::medicalRecord in DB: {}", medicalRecord);
 
         medicalRecord = medicalRecordRepository.save(medicalRecord);
 
@@ -277,6 +318,8 @@ public class StorageServiceImpl implements StorageService {
         savedMedicalRecord.setLatestUpdateDateTime(Instant.now());
         savedMedicalRecord.setS3Availability(false);
         savedMedicalRecord.setUpdatedByUser(extractDataFromJWT().get("name").toString());
+
+        log.info(">> updateMedicalRecordExistenceStatusInDB >> savedMedicalRecord in DB: {}", savedMedicalRecord);
 
         savedMedicalRecord = medicalRecordRepository.save(savedMedicalRecord);
 

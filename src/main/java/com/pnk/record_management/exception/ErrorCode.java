@@ -13,7 +13,8 @@ public enum ErrorCode {
     UNAUTHORIZED(1007, "You do not have permission", HttpStatus.FORBIDDEN),
     CANNOT_SEND_EMAIL(1008, "Cannot send email", HttpStatus.BAD_REQUEST),
     MEDICAL_RECORD_NOT_EXISTING(1009, "Medical record not existing", HttpStatus.NOT_FOUND),
-    FILE_DELETION_FAILED(1010, "Failed to delete file from S3", HttpStatus.BAD_REQUEST)
+    FILE_DELETION_FAILED(1010, "Failed to delete file from S3", HttpStatus.BAD_REQUEST),
+    RESOURCE_NOT_FOUND(1011, "Resource is not existing in database", HttpStatus.NOT_FOUND)
     ;
 
     private final int code;
