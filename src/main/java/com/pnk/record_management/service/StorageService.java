@@ -13,13 +13,13 @@ public interface StorageService {
 
     MedicalRecordResponse uploadFileToS3(MultipartFile file);
 
-    List<MedicalRecordS3Metadata> searchS3ExactFilename(String searchingWord);
+    List<MedicalRecordS3Metadata> searchS3ExactFilename(String fileName);
 
-    List<MedicalRecordS3Metadata> searchS3ContainsFilename(String searchingWord);
+    List<MedicalRecordS3Metadata> searchS3ContainsFilename(String fileName);
 
-    List<MedicalRecordResponse> searchDatabaseExactFilename(String searchingWord);
+    List<MedicalRecordResponse> searchDatabaseExactFilename(String fileName);
 
-    List<MedicalRecordResponse> searchDatabaseContainsFilename(String searchingWord);
+    List<MedicalRecordResponse> searchDatabaseContainingFilename(String fileName);
 
     byte[] downloadFileFromS3(String fileName);
 

@@ -29,10 +29,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 import static com.pnk.record_management.utils.JwtUtils.extractDataFromJWT;
 
@@ -191,8 +188,8 @@ public class StorageServiceImpl implements StorageService {
 
 
     @Override
-    public List<MedicalRecordResponse> searchDatabaseExactFilename(String searchingWord) {
-        var retrievedFile = medicalRecordRepository.findByMedicalRecordName(searchingWord)
+    public List<MedicalRecordResponse> searchDatabaseExactFilename(String fileName) {
+        var retrievedFile = medicalRecordRepository.findByMedicalRecordName(fileName)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
         MedicalRecordResponse medicalRecordResponse = modelMapper.map(retrievedFile, MedicalRecordResponse.class);
@@ -208,17 +205,30 @@ public class StorageServiceImpl implements StorageService {
 
 
     @Override
-    public List<MedicalRecordResponse> searchDatabaseContainsFilename(String searchingWord) {
-        var retrievedFile = medicalRecordRepository.findByMedicalRecordNameContains(searchingWord)
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+    public List<MedicalRecordResponse> searchDatabaseContainingFilename(String fileName) {
+        log.info(">> searchDatabaseContainingFilename >> Searching in database for medical records containing filename: {}", fileName);
 
-        MedicalRecordResponse medicalRecordResponse = modelMapper.map(retrievedFile, MedicalRecordResponse.class);
-        medicalRecordResponse.setElapsedCreationTime(
-                dateTimeFormatter.format(medicalRecordResponse.getCreationDateTime()));
+        // Retrieve the list of medical records containing the fileName
+        List<MedicalRecord> retrievedFiles = medicalRecordRepository.findByMedicalRecordNameContaining(fileName);
 
-        log.info(">> searchDatabaseContainsFilename::medicalRecordResponse {}", medicalRecordResponse);
+        // Check if the retrieved list is not null or empty
+        if (retrievedFiles == null || retrievedFiles.isEmpty()) {
+            log.info(">> searchDatabaseContainingFilename >> No medical records found containing the filename: {}", fileName);
+            return Collections.emptyList(); // Return an empty list if no records are found
+        }
 
-        return List.of(medicalRecordResponse);
+        // Map MedicalRecord entities to MedicalRecordResponse DTOs
+        List<MedicalRecordResponse> medicalRecordResponses = retrievedFiles.stream()
+                .map(file -> modelMapper.map(file, MedicalRecordResponse.class))
+                .toList();
+
+        // Format the creation date time for each response
+        medicalRecordResponses.forEach(response -> {
+            String formattedCreationTime = dateTimeFormatter.format(response.getCreationDateTime());
+            response.setElapsedCreationTime(formattedCreationTime);
+        });
+
+        return medicalRecordResponses;
     }
 
 
