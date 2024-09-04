@@ -4,6 +4,7 @@ import com.pnk.record_management.entity.MedicalRecord;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 
@@ -12,5 +13,5 @@ public interface MedicalRecordRepository extends MongoRepository<MedicalRecord, 
 
     Optional<MedicalRecord> findByMedicalRecordName(String medicalRecordName);
 
-    Optional<MedicalRecord> findByMedicalRecordNameContains(String medicalRecordName);
+    List<MedicalRecord> findByMedicalRecordNameContaining(String medicalRecordName);
 }

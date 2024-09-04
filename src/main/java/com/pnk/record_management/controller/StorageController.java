@@ -52,7 +52,7 @@ public class StorageController {
         log.info(">> searchFile::searchFileInDB: {}", searchingWord);
 
         return ApiResponse.<List<MedicalRecordResponse>>builder()
-                .result(storageService.searchDatabaseExactFilename(searchingWord))
+                .result(storageService.searchDatabaseContainingFilename(searchingWord))
                 .build();
     }
 
