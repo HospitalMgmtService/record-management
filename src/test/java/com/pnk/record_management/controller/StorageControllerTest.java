@@ -144,10 +144,10 @@ class StorageControllerTest {
 
 
     /**
-     * Method under test: {@link StorageController#searchFile(String)}
+     * Method under test: {@link StorageController#searchFileInS3(String)}
      */
     @Test
-    void testSearchFileFound() throws Exception {
+    void testSearchFileInS3() throws Exception {
         String searchingWord = "testfile.txt";
         when(storageService.searchS3ContainsFilename(searchingWord))
                 .thenReturn(List.of(medicalRecordS3Metadata));

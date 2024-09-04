@@ -28,11 +28,7 @@ public class MedicalRecord {
 
     Instant creationDateTime;
 
-    String elapsedCreationTime;
-
     Instant latestUpdateDateTime;
-
-    String elapsedUpdateTime;
 
     boolean s3Availability;
 

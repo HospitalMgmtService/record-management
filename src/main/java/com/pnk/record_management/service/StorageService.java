@@ -17,6 +17,10 @@ public interface StorageService {
 
     List<MedicalRecordS3Metadata> searchS3ContainsFilename(String searchingWord);
 
+    List<MedicalRecordResponse> searchDatabaseExactFilename(String searchingWord);
+
+    List<MedicalRecordResponse> searchDatabaseContainsFilename(String searchingWord);
+
     byte[] downloadFileFromS3(String fileName);
 
     MedicalRecordResponse deleteFileFromS3(String fileName);
